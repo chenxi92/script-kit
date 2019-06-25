@@ -12,3 +12,5 @@
 1. [自动剪裁icon](./clip-icon/README.md)
 2. [ipa重签名](./resign-ipa/README.md)
 3. [导出静态库](./export-static-library/README.md)
+4. [Excel 导出为 CSV 文件](./xlsx-to-csv/README.md)
+
