@@ -39,10 +39,10 @@ def main():
     current_dir = os.getcwd()
     for file in os.listdir(current_dir):
         if os.path.isdir(file) or file.startswith("."):
-            break
+            continue
         [file_name, file_suffix] = file.split(".")
         if file_suffix != "xlsx":
-            break
+            continue
         xlsx_file_path = os.path.join(current_dir, file)
         csv_file_path = os.path.join(current_dir, file_name + ".csv")
         xlsx_to_csv(xlsx_file_path, csv_file_path, delimiter="|")
