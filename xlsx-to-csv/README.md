@@ -4,7 +4,7 @@
 
 Python2.7
 
-`xlrd` 库文件
+下载 `xlrd` 库
 
 
 
