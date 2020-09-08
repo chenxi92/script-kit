@@ -9,7 +9,8 @@ import shutil
 import random
 
 
-SIGN_FILE_SUFFIX = [".dylib", ".so", ".0", ".vis", ".pvr", ".framework", ".appex", ".app"]
+SIGN_FILE_SUFFIX = [".dylib", ".so", ".0", ".vis",
+                    ".pvr", ".framework", ".appex", ".app"]
 WS_FILES = []
 SEQ = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
@@ -52,11 +53,13 @@ def generateGarbageResource(app_file_path, size=0):
 
 
 def executeCommand(cmd):
-    s = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    s = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     stdoutput, erroutput = s.communicate()
     ret = s.wait()
     if ret:
-        raise Exception("execute command = {} Failed.\nerror = {}".format(cmd, erroutput))
+        raise Exception(
+            "execute command = {} Failed.\nerror = {}".format(cmd, erroutput))
     return stdoutput
 
 
@@ -74,7 +77,8 @@ def handleInfoPlist(info_plist_path, bundle_identity=None, version=None, display
         dic['CFBundleShortVersionString'] = version
         dic['CFBundleVersion'] = version
     for key, value in dic.items():
-        command = "/usr/libexec/PlistBuddy -c 'Set :" + key + " " + value + "' " + '"' + info_plist_path + '"'
+        command = "/usr/libexec/PlistBuddy -c 'Set :" + key + \
+            " " + value + "' " + '"' + info_plist_path + '"'
         executeCommand(command)
 
 
@@ -110,10 +114,12 @@ def handleEntitlementPlist(profile_path, app_file_path):
     executeCommand(command)
 
     # 2. export the `temp_entitlement_file` fileds
-    temp_entitlement_file = os.path.join(os.path.dirname(app_file_path), "Entitlements.plist")
+    temp_entitlement_file = os.path.join(
+        os.path.dirname(app_file_path), "Entitlements.plist")
     if os.path.exists(temp_entitlement_file):
         os.remove(temp_entitlement_file)
-    command = "/usr/libexec/PlistBuddy -x -c 'Print:Entitlements' '" + temp_file_path + "'>" + temp_entitlement_file
+    command = "/usr/libexec/PlistBuddy -x -c 'Print:Entitlements' '" + \
+        temp_file_path + "'>" + temp_entitlement_file
     executeCommand(command)
 
     os.remove(temp_file_path)
@@ -130,7 +136,8 @@ def getProfilePath(profile_name):
     '''
     get profile path, always return the newest profile path
     '''
-    provision_profile_dir = "/Users/" + getpass.getuser() + "/Library/MobileDevice/Provisioning Profiles"
+    provision_profile_dir = "/Users/" + \
+        getpass.getuser() + "/Library/MobileDevice/Provisioning Profiles"
     profile_data = {}
     for file in os.listdir(provision_profile_dir):
         if os.path.splitext(file)[1] == '.mobileprovision':
@@ -144,7 +151,8 @@ def getProfilePath(profile_name):
                 os.remove(file_path)
                 continue
             if plist['Name'] == profile_name:
-                profile_path = os.path.join(provision_profile_dir, plist['UUID'] + '.mobileprovision')
+                profile_path = os.path.join(
+                    provision_profile_dir, plist['UUID'] + '.mobileprovision')
                 profile_data[expiration_time] = profile_path
 
     if len(profile_data.keys()) < 1:
@@ -205,7 +213,8 @@ def resign(profile_name, certificate_name, input_file_path, output_file_path, ve
 
     generateGarbageResource(app_path, garbageSize)
 
-    entitlement_plist_path, bundle_identity = handleEntitlementPlist(profile_path, app_path)
+    entitlement_plist_path, bundle_identity = handleEntitlementPlist(
+        profile_path, app_path)
     print "\nentitlement_plist_path = {}\nbundle_identity = {}".format(entitlement_plist_path, bundle_identity)
 
     info_plist_path = os.path.join(app_path, 'Info.plist')
@@ -214,12 +223,14 @@ def resign(profile_name, certificate_name, input_file_path, output_file_path, ve
     # recursive file and sign the files
     recursiveFiles(app_path)
     for file in WS_FILES:
-        command = '/usr/bin/codesign -vvv -fs ' + '"' + certificate_name + '"' + ' --no-strict --entitlements "' + entitlement_plist_path + '" ' + file
+        command = '/usr/bin/codesign -vvv -fs ' + '"' + certificate_name + '"' + \
+            ' --no-strict --entitlements "' + entitlement_plist_path + '" ' + file
         print "resing file : %s" % command
         executeCommand(command)
 
     # sign the .app
-    command = '/usr/bin/codesign -vvv -fs ' + '"' + certificate_name + '"' + ' --no-strict --entitlements "' + entitlement_plist_path + '" ' + app_path
+    command = '/usr/bin/codesign -vvv -fs ' + '"' + certificate_name + '"' + \
+        ' --no-strict --entitlements "' + entitlement_plist_path + '" ' + app_path
     print "resign app : %s" % command
     executeCommand(command)
 
@@ -233,38 +244,47 @@ def resign(profile_name, certificate_name, input_file_path, output_file_path, ve
     os.remove(entitlement_plist_path)
 
     # pack to ipa
-    payload_dir = os.path.abspath(os.path.join(os.path.dirname(app_path), "../"))
+    payload_dir = os.path.abspath(
+        os.path.join(os.path.dirname(app_path), "../"))
     payload_path = os.path.join(payload_dir, "Payload")
     pack(payload_dir, output_file_path)
     shutil.rmtree(payload_path)
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Resign an ipa file, with a .mobileprovision files name, and use a certificate')
+    parser = argparse.ArgumentParser(
+        description='Resign an ipa file, with a .mobileprovision files name, and use a certificate')
     parser.add_argument('-in', '--input', help='Path to input .ipa file')
-    parser.add_argument('-out', '--output', help='Path to output .ipa file. Defaults to outputting into the same directory.')
-    parser.add_argument('-p', '--profile', help='a .mobileprovision files UUID', required=True)
-    parser.add_argument('-c', '--certificate', help="a certification's name", required=True)
+    parser.add_argument(
+        '-out', '--output', help='Path to output .ipa file. Defaults to outputting into the same directory.')
+    parser.add_argument('-p', '--profile',
+                        help='a .mobileprovision files UUID', required=True)
+    parser.add_argument('-c', '--certificate',
+                        help="a certification's name", required=True)
     parser.add_argument('-v', '--buildVersion', help="the build version")
-    parser.add_argument('-s', '--garbageSize', help="generate garbage resources size")
+    parser.add_argument('-s', '--garbageSize',
+                        help="generate garbage resources size")
     args = parser.parse_args()
     if len(args.profile) < 1:
         raise Exception("mobileprovision file name must not be nil")
 
     if not args.certificate.startswith('iPhone'):
-        raise Exception("certification name {%s} not correct" % args.certificate)
+        raise Exception(
+            "certification name {%s} not correct" % args.certificate)
 
     if not os.path.isabs(args.input):
         args.input = os.path.join(os.path.abspath("."), args.input)
     if not os.path.exists(args.input):
-        raise Exception("input file {%s} not exist, please check again." % args.input)
+        raise Exception(
+            "input file {%s} not exist, please check again." % args.input)
 
     if args.output is None:
         head, tail = os.path.split(args.input)
         if args.buildVersion is None:
             outputFileName = tail.split(".ipa")[0] + "_output_.ipa"
         else:
-            outputFileName = tail.split(".ipa")[0] + "_" + args.buildVersion + "_output_.ipa"
+            outputFileName = tail.split(
+                ".ipa")[0] + "_" + args.buildVersion + "_output_.ipa"
         args.output = os.path.join(head, outputFileName)
     else:
         if not os.path.isabs(args.output):
@@ -272,7 +292,8 @@ def main():
 
     if args.garbageSize is None:
         args.garbageSize = 0
-    resign(args.profile, args.certificate, args.input, args.output, args.buildVersion, int(args.garbageSize))
+    resign(args.profile, args.certificate, args.input,
+           args.output, args.buildVersion, int(args.garbageSize))
 
 
 if __name__ == '__main__':
