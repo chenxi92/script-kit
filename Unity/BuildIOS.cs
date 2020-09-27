@@ -6,7 +6,7 @@ using UnityEditor.Callbacks;
 using UnityEditor;
 using UnityEditor.iOS.Xcode;
 using System.IO;
-
+using System.Linq;
 
 public static class BuildIOS
 {
@@ -15,7 +15,7 @@ public static class BuildIOS
     #region Info.plist 文件设置
     private static readonly Dictionary<string, string> InfoPlistStringFields = new Dictionary<string, string>
     {
-        { "GADApplicationIdentifier", "ca-app-pub-3940256099942544~1458002511" },
+        {"GADApplicationIdentifier",  "ca-app-pub-3940256099942544~1458002511" },
         {"FacebookAppID",             "西部SLG"},
         {"FacebookDisplayName",       "406381166977364"},
 
@@ -70,7 +70,7 @@ public static class BuildIOS
     #endregion
 
     private static readonly string[] ValidResourceTypes = { ".plist", ".bundle" };
-    private static readonly string   ProductName = "mythpuzzlerpgios";
+    private static readonly string ProductName = "mythpuzzlerpgios";
     #endregion
 
     #region - Public
@@ -82,9 +82,38 @@ public static class BuildIOS
             Debug.LogError("xcode build path can't be null.");
             return;
         }
+        Debug.Log("Xcode project path: " + projDir);
 
         BuildOptions option = BuildOptions.None;
         BuildReport report = BuildPipeline.BuildPlayer(GetLevelsFromBuildSettings(), projDir, BuildTarget.iOS, option);
+        BuildSummary summary = report.summary;
+        if (summary.result == BuildResult.Succeeded)
+        {
+            Debug.Log("Build success, cost " + summary.totalTime.Seconds + " seconds.");
+        }
+        else if (summary.result == BuildResult.Failed)
+        {
+            Debug.LogError("Build fail");
+            return;
+        }
+    }
+
+    [MenuItem("Build/Build iOS")]
+    public static void MyBuild()
+    {
+        CheckDynamicFrameworkSetting();
+
+        //PlayerSettings.SetScriptingDefineSymbolsForGroup(BuildTargetGroup.iOS, "SHOW_LOG");
+
+        BuildPlayerOptions options = new BuildPlayerOptions
+        {
+            scenes = GetLevelsFromBuildSettings(),
+            target = BuildTarget.iOS,
+            locationPathName = "ExportProject/iOS",
+            options = BuildOptions.None
+        };
+
+        BuildReport report = BuildPipeline.BuildPlayer(options);
         BuildSummary summary = report.summary;
         if (summary.result == BuildResult.Succeeded)
         {
@@ -125,6 +154,46 @@ public static class BuildIOS
     #endregion
 
     #region Private
+    private static void CheckDynamicFrameworkSetting(string searchPath = "Assets/Plugins/IOS")
+    {
+        string[] keys = { "MoPub" };
+        foreach (string filePath in Directory.GetDirectories(searchPath, "*.framework", searchOption: SearchOption.AllDirectories))
+        {
+            bool isContainKeyWorld = false;
+            foreach (string key in keys)
+            {
+                if (filePath.Contains(key))
+                {
+                    isContainKeyWorld = true;
+                    break;
+                }
+            }
+            if (!isContainKeyWorld)
+            {
+                continue;
+            }
+
+            PluginImporter importer = AssetImporter.GetAtPath(filePath) as PluginImporter;
+            if (importer == null)
+            {
+                Debug.LogError("PluginImporter not found" + filePath);
+                throw new System.Exception("PluginImporter not found");
+            }
+
+            string oldValue = importer.GetPlatformData(BuildTarget.iOS, "AddToEmbeddedBinaries");
+            if (oldValue != "true")
+            {
+                Debug.Log("begin set AddToEmbeddedBinaries in: " + filePath);
+
+                importer.SetPlatformData(BuildTarget.iOS, "AddToEmbeddedBinaries", "true");
+                importer.SaveAndReimport();
+            } else
+            {
+                Debug.LogFormat("{0} already set AddToEmbeddedBinaries.", filePath);
+            }
+        }
+    }
+
     private static void AddBuildSettings(PBXProject project)
     {
         string targetGuid = project.GetUnityMainTargetGuid();
