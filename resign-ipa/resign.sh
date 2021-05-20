@@ -70,7 +70,7 @@ cp "${provisionFilePath}" "${embededProvisionFile}"
 bundleId=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' /dev/stdin <<< $(/usr/bin/security cms -D -i "${embededProvisionFile}"))
 bundleId=${bundleId#*.}
 log "bundleId = $bundleId"
-/usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier ${bundleId}' "${appPath}/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier '${bundleId}'" "${appPath}/Info.plist"
 
 # code sign info
 codeSignValue=$(/usr/libexec/PlistBuddy -c 'Print :DeveloperCertificates:0' /dev/stdin <<< $(security cms -D -i "${embededProvisionFile}") \

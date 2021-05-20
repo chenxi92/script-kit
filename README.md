@@ -15,4 +15,5 @@
 4. [Excel 导出为 CSV 文件](./xlsx-to-csv/README.md)
 5. [获取实时汇率](./exchange-rate/README.md)
 6. [Unity 导出Xcode工程脚本](./Unity/BuildIOS.cs)
+7. [Mac 电脑配置脚本](./mac-init.sh)
 
