@@ -16,4 +16,5 @@
 5. [获取实时汇率](./exchange-rate/README.md)
 6. [Unity 导出Xcode工程脚本](./Unity/BuildIOS.cs)
 7. [Mac 电脑配置脚本](./mac-init.sh)
+8. [kill 制定端口进程](./kill-sub-progress.sh)
 
