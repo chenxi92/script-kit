@@ -17,4 +17,5 @@
 6. [Unity 导出Xcode工程脚本](./Unity/BuildIOS.cs)
 7. [Mac 电脑配置脚本](./mac-init.sh)
 8. [kill 制定端口进程](./kill-sub-progress.sh)
+9. [手动解析符号表](./crash-symbol.sh)
 
