@@ -90,6 +90,8 @@ systemCommand(){
 		"telnet"
 		"git-lfs"
 		"wget"
+		"libimobiledevice"
+		"ideviceinstaller"
 	)
 	for cmd in "${cmdLines[@]}"; do
 		soft=$(which $cmd)
