@@ -18,4 +18,5 @@
 7. [Mac 电脑配置脚本](./mac-init.sh)
 8. [kill 制定端口进程](./kill-sub-progress.sh)
 9. [手动解析符号表](./crash-symbol.sh)
+10. [Unity 解析Provision文件信息](./Unity/ProvisionFileManager.cs)
 
