@@ -83,25 +83,32 @@ modifyOhMyZsh() {
     source ~/.zshrc
 }
 
-systemCommand(){
+installSoftwares(){
 	cmdLines=(
-		"ag"
+		"the_silver_searcher"
 		"jq"
 		"telnet"
 		"git-lfs"
 		"wget"
 		"libimobiledevice"
 		"ideviceinstaller"
+        "tree"
+        "wget"
+        "mas"
+        "sublime-text"
+        "typora"
+        "visual-studio-code"
+        "google-chrome"
+        "shadowsocksx-ng-r"
+        "wechat"
 	)
 	for cmd in "${cmdLines[@]}"; do
-		soft=$(which $cmd)
-		if [ "$soft" ] >/dev/null 2>&1; then
-            log "[${cmd}] 已安装!"
+		if (echo $(brew list)  | fgrep -q ${cmd}); then
+            echo "${cmd} has already installed."
+        elif (echo $(brew list --cask)  | fgrep -q ${cmd}); then
+            echo "${cmd} has already cask installed."
         else
-            if [[ ${cmd} == "ag" ]]; then
-            	cmd="the_silver_searcher"
-            fi
-            log "[${cmd}] 安装中......"
+            log "[${cmd}] 安装中..."
             brew install ${cmd}
 
             if [[ ${cmd} == "git-lfs" ]]; then
@@ -161,8 +168,8 @@ main() {
 	installOhMyZsh
 
 	echo ""
-	echo "install commands"
-	systemCommand
+	echo "install softwares"
+	installSoftwares
 
 	echo ""
 	echo "install jenkins"
