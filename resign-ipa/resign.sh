@@ -1,5 +1,9 @@
 #! /bin/bash
 
+# put the ipa file with the same folder as the script
+# setup the `provisionFileName`
+# sh resign.sh
+
 set -eu
 
 RED="\033[31m"
@@ -82,6 +86,13 @@ log "bundleId = $bundleId"
 codeSignValue=$(/usr/libexec/PlistBuddy -c 'Print :DeveloperCertificates:0' /dev/stdin <<< $(security cms -D -i "${embededProvisionFile}") \
         | openssl x509 -inform DER -noout -subject \
         | sed -n '/^subject/s/^.*CN=\(.*\)\/OU=.*/\1/p')
+if [[ -z "${codeSignValue}" ]]; then
+    log "not find codeSignValue, try to another way"
+    codeSignValue=$(/usr/libexec/PlistBuddy -c 'Print :DeveloperCertificates:0' /dev/stdin <<< $(security cms -D -i "${embededProvisionFile}") \
+        | openssl x509 -inform DER -noout -subject \
+        | awk -F"CN = " '{print $2}' \
+        | awk -F", " '{print $1}')
+fi
 log "codeSignValue = $codeSignValue"
 
 resignPaths=$(find "$appPath" -d -name *.app \
