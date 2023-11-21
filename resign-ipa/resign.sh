@@ -52,7 +52,7 @@ log "app file: ${BLUE}${appPath}${NC}"
 # jsonPath=$(find ${appPath} -name parameter.json)
 # if [[ -f $jsonPath ]]; then
 #     log "modify $jsonPath"
-#     sed -i ' ' "s/ios-pay.godsstrike.com/pre-test-aws-kmpay.karmasgame.com/g" $jsonPath
+#     sed -i '' "s/ios-pay.godsstrike.com/pre-test-aws-kmpay.karmasgame.com/g" $jsonPath
 # fi
 
 provisionFilePath=""
@@ -122,7 +122,7 @@ if [[ -f "${outputIpaPath}" ]]; then
     rm -rf "${outputIpaPath}"
 fi
 log "zip: \n${BLUE}${payloadPath}${NC}\n->\n${BLUE}${outputIpaPath}${NC}"
-(cd $(dirname "${payloadPath}") && zip -qyr "${outputIpaPath}" * && (cd "${workDir}")) || quit "zip ipa fail"
+(cd $(dirname "${payloadPath}") && zip -q -r "${outputIpaPath}" "Payload" && (cd "${workDir}")) || quit "zip ipa fail"
 log "zip success"
 
 echo ""
