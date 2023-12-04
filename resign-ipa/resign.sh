@@ -1,33 +1,44 @@
-#! /bin/bash
-
-# put the ipa file with the same folder as the script
-# setup the `provisionFileName`
+#!/bin/bash
+# 
+# Resign ipa file with specific provision file.
+# 
+# Find the ipa file at the current directory or 
+# you can specify the location as the first parameter
+#
+# Usage:
+# sh resign.sh <ipa-file-path>
 # sh resign.sh
 
 set -eu
+# set -x # debug mode
 
 RED="\033[31m"
 BLUE="\033[34m"
 NC="\033[0m" # no color
+PROVISION_FILE_INSTALL_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+PROVISION_FILE_NAME="xxxx"
 
-provisionFileName="xxxx"
+echo "resign ipa with provision file: ${PROVISION_FILE_NAME}"
 
-ipaPath=$(find $(pwd) -name *.ipa) || {
-    echo "[$(pwd)] must only exist one ipa file, please checkout."
+ipa_file_path=${1:-$(find $(pwd) -name *.ipa)}
+if [[ ! -f "${ipa_file_path}" ]]; then
+    echo "Not specify ipa file or not find ipa file at current directory! [${ipa_file_path}]"
     exit 1
-}
-workDir=$(dirname $ipaPath)
-ipaName=${ipaPath##*/} # delete the last '/' 
-ipaName="${ipaName%.*}_resign.ipa" # delete last '.' and append '_resign.ipa'
-outputIpaPath="${workDir}/${ipaName}"
-entitlementPlistPath="${workDir}/entitlements.plist"
+fi
+
+work_dir=$(dirname $ipa_file_path)
+ipa_name=${ipa_file_path##*/} # delete the last '/' 
+ipa_name="${ipa_name%.*}_resigned.ipa" # delete last '.' and append '_resign.ipa'
+output_ipa_file_path="${work_dir}/${ipa_name}"
+entitlement_plist_path="${work_dir}/entitlements.plist"
+
 
 function clean() {
-    if [[ -d "${workDir}/Payload" ]]; then
-	rm -rf "${workDir}/Payload"
+    if [[ -d "${work_dir}/Payload" ]]; then
+	   rm -rf "${work_dir}/Payload"
     fi
-    if [[ -f "${entitlementPlistPath}" ]]; then
-        rm -rf "${entitlementPlistPath}"
+    if [[ -f "${entitlement_plist_path}" ]]; then
+        rm -rf "${entitlement_plist_path}"
     fi
 }
 
@@ -41,88 +52,96 @@ function quit() {
     exit 1
 }
 
-log "working in: ${workDir}"
-log "unzip: ${BLUE}${ipaPath}${NC}"
-clean && unzip -q "${ipaPath}" || quit "unzip ipa fail"
+log "working in: [${work_dir}]"
+log "unzip: [${ipa_file_path}]"
+clean && unzip -q "${ipa_file_path}" || quit "unzip ipa fail"
 
-appPath=$(find ${workDir} -name *.app -type d)
-log "app file: ${BLUE}${appPath}${NC}"
+app_path=$(find ${work_dir} -name *.app -type d)
+log "app file: ${BLUE}${app_path}${NC}"
 
 # bussiness
-# jsonPath=$(find ${appPath} -name parameter.json)
-# if [[ -f $jsonPath ]]; then
-#     log "modify $jsonPath"
-#     sed -i '' "s/ios-pay.godsstrike.com/pre-test-aws-kmpay.karmasgame.com/g" $jsonPath
+# parameter_file_path=$(find ${app_path} -name "parameter.json")
+# if [[ -f $parameter_file_path ]]; then
+#     log "modify [$parameter_file_path]"
+#     sed -i '' "s/aaa/bbb/g" "$parameter_file_path"
 # fi
 
-provisionFilePath=""
-provisionFileDir="$HOME/Library/MobileDevice/Provisioning Profiles"
-for file in $(ls -Ut "${provisionFileDir}"); do
-    name=$(/usr/libexec/PlistBuddy -c 'Print :Name' /dev/stdin <<< $(/usr/bin/security cms -D -i "${provisionFileDir}/$file"))
-    if [[ ${name} == "${provisionFileName}" ]]; then
-	provisionFilePath="${provisionFileDir}/${file}"
-	log "provision file path: $provisionFilePath"
-	break
+provision_file_path=""
+for file in $(ls -Ut "${PROVISION_FILE_INSTALL_DIR}"); do
+    name=$(/usr/libexec/PlistBuddy -c 'Print :Name' /dev/stdin <<< $(/usr/bin/security cms -D -i "${PROVISION_FILE_INSTALL_DIR}/$file"))
+    if [[ ${name} == "${PROVISION_FILE_NAME}" ]]; then
+	   provision_file_path="${PROVISION_FILE_INSTALL_DIR}/${file}"
+	   log "provision file path: $provision_file_path"
+	   break
     fi
 done
-if [[ -z ${provisionFilePath} ]]; then
-    quit "not exist provision file: ${provisionFileName}"
+if [[ -z ${provision_file_path} ]]; then
+    quit "not exist provision file: ${PROVISION_FILE_NAME}"
 fi
-embededProvisionFile="${appPath}/embedded.mobileprovision"
+embededProvisionFile="${app_path}/embedded.mobileprovision"
 if [[ -f ${embededProvisionFile} ]]; then
     rm -rf ${embededProvisionFile}
 fi
-cp "${provisionFilePath}" "${embededProvisionFile}"
 
-/usr/libexec/PlistBuddy -x -c 'Print :Entitlements' /dev/stdin <<< $(/usr/bin/security cms -D -i "${embededProvisionFile}") > $entitlementPlistPath
+log "copy provision file: \n${provision_file_path} \n->\n${embededProvisionFile}\n"
+cp "${provision_file_path}" "${embededProvisionFile}"
+
+/usr/libexec/PlistBuddy -x -c 'Print :Entitlements' /dev/stdin <<< $(/usr/bin/security cms -D -i "${embededProvisionFile}") > $entitlement_plist_path
 
 # bundleId
 bundleId=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' /dev/stdin <<< $(/usr/bin/security cms -D -i "${embededProvisionFile}"))
 bundleId=${bundleId#*.}
 log "bundleId = $bundleId"
-/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier '${bundleId}'" "${appPath}/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier '${bundleId}'" "${app_path}/Info.plist"
+
 
 # code sign info
-codeSignValue=$(/usr/libexec/PlistBuddy -c 'Print :DeveloperCertificates:0' /dev/stdin <<< $(security cms -D -i "${embededProvisionFile}") \
+code_sign=$(/usr/libexec/PlistBuddy -c 'Print :DeveloperCertificates:0' /dev/stdin <<< $(security cms -D -i "${embededProvisionFile}") \
         | openssl x509 -inform DER -noout -subject \
         | sed -n '/^subject/s/^.*CN=\(.*\)\/OU=.*/\1/p')
-if [[ -z "${codeSignValue}" ]]; then
-    log "not find codeSignValue, try to another way"
-    codeSignValue=$(/usr/libexec/PlistBuddy -c 'Print :DeveloperCertificates:0' /dev/stdin <<< $(security cms -D -i "${embededProvisionFile}") \
+if [[ -z "${code_sign}" ]]; then
+    log "not find code_sign, try to another way"
+    code_sign=$(/usr/libexec/PlistBuddy -c 'Print :DeveloperCertificates:0' /dev/stdin <<< $(security cms -D -i "${embededProvisionFile}") \
         | openssl x509 -inform DER -noout -subject \
         | awk -F"CN = " '{print $2}' \
         | awk -F", " '{print $1}')
 fi
-log "codeSignValue = $codeSignValue"
+log "code_sign = $code_sign"
 
-resignPaths=$(find "$appPath" -d -name *.app \
-							  -o -name *.framework \
-							  -o -name *.dylib \
-							  -o -name *.appex -type f \
-							  -o -name *.so -type f \
-							  -o -name *.o -type f \
-							  -o -name *.vis -type f \
-							  -o -name *.pvr -type f \
-							  -o -name *.egg -type f \
-							  -o -name *.0 -type f)
-for path in $resignPaths; do
-    log "[resign] ${RED}/usr/bin/codesign -vvv -fs \"${codeSignValue}\" --no-strict --entitlements \"${entitlementPlistPath}\" \"${path}\" ${NC}"
-    /usr/bin/codesign -vvv -fs "${codeSignValue}" --no-strict --entitlements "${entitlementPlistPath}" "${path}"
+
+resign_file_array=$(find "$app_path" \
+    -d -name *.app \
+	-o -name *.framework \
+	-o -name *.dylib \
+	-o -name *.appex -type f \
+	-o -name *.so -type f \
+	-o -name *.o -type f \
+	-o -name *.vis -type f \
+	-o -name *.pvr -type f \
+	-o -name *.egg -type f \
+	-o -name *.0 -type f)
+
+for resign_file in $resign_file_array; do
+    log "[resign] ${RED}/usr/bin/codesign -vvv -fs \"${code_sign}\" --no-strict --entitlements \"${entitlement_plist_path}\" \"${resign_file}\" ${NC}"
+    /usr/bin/codesign -vvv \
+    -fs "${code_sign}" \
+    --no-strict \
+    --entitlements "${entitlement_plist_path}" "${resign_file}"
     echo ""
 done
 
 echo ""
 log "verify ipa ..."
-/usr/bin/codesign --verify "${appPath}" || quit "verify ipa fail"
+/usr/bin/codesign --verify "${app_path}" || quit "verify ipa fail"
 log "verify success"
 
 echo ""
-payloadPath=$(dirname "${appPath}")
-if [[ -f "${outputIpaPath}" ]]; then
-    rm -rf "${outputIpaPath}"
+payload_dir=$(dirname "${app_path}")
+if [[ -f "${output_ipa_file_path}" ]]; then
+    rm -rf "${output_ipa_file_path}"
 fi
-log "zip: \n${BLUE}${payloadPath}${NC}\n->\n${BLUE}${outputIpaPath}${NC}"
-(cd $(dirname "${payloadPath}") && zip -q -r "${outputIpaPath}" "Payload" && (cd "${workDir}")) || quit "zip ipa fail"
+log "zip: \n${BLUE}${payload_dir}${NC}\n->\n${BLUE}${output_ipa_file_path}${NC}"
+(cd $(dirname "${payload_dir}") && zip -q -r "${output_ipa_file_path}" "Payload" && (cd "${work_dir}")) || quit "zip ipa fail"
 log "zip success"
 
 echo ""
