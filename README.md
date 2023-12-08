@@ -19,4 +19,5 @@
 8. [kill 制定端口进程](./kill-sub-progress.sh)
 9. [手动解析符号表](./crash-symbol.sh)
 10. [Unity 解析Provision文件信息](./Unity/ProvisionFileManager.cs)
+11. [Resign apk file](./resign_apk.sh)
 
