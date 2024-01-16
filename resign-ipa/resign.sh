@@ -103,7 +103,7 @@ if [[ -z "${code_sign}" ]]; then
     log "not find code_sign, try to another way"
     code_sign=$(/usr/libexec/PlistBuddy -c 'Print :DeveloperCertificates:0' /dev/stdin <<< $(security cms -D -i "${embededProvisionFile}") \
         | openssl x509 -inform DER -noout -subject \
-        | awk -F"CN = " '{print $2}' \
+        | awk -F"CN=" '{print $2}' \
         | awk -F", " '{print $1}')
 fi
 log "code_sign = $code_sign"
