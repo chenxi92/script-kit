@@ -276,7 +276,8 @@ public static class ProvisionFileManager
     private static List<string> LoadLocalProfiles()
     {
         string[] searchPath = new string[] {
-            "{Home}/Library/MobileDevice/Provisioning Profiles"
+            "{Home}/Library/MobileDevice/Provisioning Profiles",
+            "{Home}/Library/Developer/Xcode/UserData/Provisioning Profiles"
         };
         List<string> localProfiles = new List<string>();
         foreach (var path in searchPath)
